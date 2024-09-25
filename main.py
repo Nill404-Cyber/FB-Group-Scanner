@@ -1,19 +1,21 @@
-#Written By :  Nill
-#Date       :  09/26/2024
-#Version    :  1.0
-#==============================
-import re
-import os
-import time
+# Written By :  Nill
+# Date       :  09/26/2024
+# Version    :  1.0
+# ==============================
 import requests
+import re
+import time
 from rich.console import Console
 from rich.tree import Tree
 from rich.panel import Panel
+import os
+from concurrent.futures import ThreadPoolExecutor
 
 console = Console()
 fileName1 = 'HighRich - ' + time.strftime("%Y-%m-%d   %H-%M-%S") + '.txt'
 fileName2 = 'LowRich - ' + time.strftime("%Y-%m-%d   %H-%M-%S") + '.txt'
-def __HighRich__(guid, posts):
+
+def __HighRich__(guid, posts, members):
     headers = {
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'accept-language': 'en-US,en;q=0.9',
@@ -29,7 +31,7 @@ def __HighRich__(guid, posts):
         'sec-fetch-user': '?1',
         'upgrade-insecure-requests': '1',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-        'viewport-width': '1365',
+        'viewport-width': '1365'
     }
     try:
         response = requests.get(f'https://www.facebook.com/groups/{guid}/about', headers=headers)
@@ -38,19 +40,19 @@ def __HighRich__(guid, posts):
             return
         response_text = response.text
         facebook_posts = re.search(r'number_of_posts_in_last_day["\']:\s*(\d+)', response_text)
-        total_members = re.search(r'group_total_members_info_text["\']:\s*["\']([^"\']+)["\']', response_text).group(1).replace('total members','')
+        total_members = re.search(r'group_total_members_info_text["\']:\s*["\']([^"\']+)["\']', response_text).group(1).replace('total members', '').replace("+", "").replace(",", "").strip()
         __GNAME__ = re.findall(r'"Group","name":"(.*?)"', response_text)[0]
         Gname = 'Name Error' if '\\u' in __GNAME__ else __GNAME__
         if facebook_posts:
             facebook_posts = int(facebook_posts.group(1))
-            if facebook_posts >= int(posts):
+            if facebook_posts >= int(posts) and int(total_members) >= int(members):
                 tree = Tree(f"Group :[bold sea_green2] https://www.facebook.com/groups/{guid}")
                 __1X__ = tree.add(f"[plum2]Group Name :[orange_red1] {Gname}")
                 __1X__.add(f"[plum2]Total Members :[bold sea_green2] {total_members}")
                 __1X__.add(f"[plum2]New Posts Today :[bold sea_green2] {facebook_posts}")
                 panel = Panel(tree, width=90, border_style="cyan2", title="[bold bright_green]High Rich")
                 console.print(panel)
-                with open(fileName1,"a") as file:
+                with open(fileName1, "a") as file:
                     file.write(f"https://www.facebook.com/groups/{guid}\n")
             else:
                 tree = Tree(f"[violet]Group :[bold deep_pink2] https://www.facebook.com/groups/{guid}")
@@ -59,11 +61,11 @@ def __HighRich__(guid, posts):
                 __1X__.add(f"[violet]New Posts Today :[bold deep_pink2] {facebook_posts}")
                 panel = Panel(tree, width=90, border_style="dark_violet", title="Low Rich")
                 console.print(panel)
-                with open(fileName2,"a") as file:
+                with open(fileName2, "a") as file:
                     file.write(f"https://www.facebook.com/groups/{guid}\n")
         else:
             console.print(f"[red]Unable to retrieve posts for Group {guid}.[/red]")
-    except Exception as e:      
+    except Exception as e:
         tree = Tree(f"Group :[red] https://www.facebook.com/groups/{guid}")
         __1X__ = tree.add(f"Group Name :[red] Error 404 Not Found")
         __1X__.add(f"Total Members :[red] Error 404 Not Found")
@@ -71,20 +73,24 @@ def __HighRich__(guid, posts):
         panel = Panel(tree, width=90, border_style="red", title="Error")
         console.print(panel)
 
-def check_groups_from_file(posts):
+def check_groups_from_file(posts, members,_speed):
     with open('Group_Uids.txt', 'r') as file:
         group_ids = file.readlines()
     group_ids = [group_id.strip() for group_id in group_ids if group_id.strip()]
-    for group_id in group_ids:
-        __HighRich__(group_id, posts)
-        time.sleep(2)
+    
+    with ThreadPoolExecutor(max_workers=_speed) as executor:
+        executor.map(lambda group_id: __HighRich__(group_id, posts, members), group_ids)
+
 def banner():
     os.system('cls')
     console.print(Panel(f"""[bold gold1]        ╦ ╦╦╔═╗╦ ╦  ╦═╗╦╔═╗╦ ╦  ╔═╗╦═╗╔═╗╦ ╦╔═╗  ╔═╗╦ ╔╗╔╔╦╗╔═╗╦═╗
         ╠═╣║║ ╦╠═╣  ╠╦╝║║  ╠═╣  ║ ╦╠╦╝║ ║║ ║╠═╝  ╠╣ ║ ║║║ ║║║╣ ╠╦╝
-        ╩ ╩╩╚═╝╩ ╩  ╩╚═╩╚═╝╩ ╩  ╚═╝╩╚═╚═╝╚═╝╩    ╚  ╩ ╝╚╝═╩╝╚═╝╩╚═""",width=90,padding=(0,8),style=f"bold white",title=f"NILL-XD"))
-if __name__=='__main__':
+        ╩ ╩╩╚═╝╩ ╩  ╩╚═╩╚═╝╩ ╩  ╚═╝╩╚═╚═╝╚═╝╩    ╚  ╩ ╝╚╝═╩╝╚═╝╩╚═""", width=90, padding=(0, 8), style=f"bold white", title=f"NILL-XD"))
+
+if __name__ == '__main__':
     banner()
-    posts = input('Posts Per Day => ')
+    posts = input('Posts Per Day   => ')
+    members = input('Minimum Members => ')
+    _speed = int(input('Speed   => '))
     banner()
-    check_groups_from_file(posts)
+    check_groups_from_file(posts, members,_speed)
